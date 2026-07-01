@@ -1,0 +1,10 @@
+{:itonami.blueprint/id "cloud-itonami-isco-8332"
+ :itonami.blueprint/name "Independent Freight Driving Operations"
+ :itonami.blueprint/isco-08 "8332"
+ :itonami.blueprint/domain :logistics/freight-driving
+ :itonami.blueprint/license "AGPL-3.0-or-later"
+ :itonami.blueprint/social-impact [:supply-reliability :road-safety :driver-wellbeing]
+ :itonami.blueprint/governor :freight-driver-governor
+ :itonami.blueprint/robotics true
+ :itonami.blueprint/required-technologies [:robotics :telemetry :identity :dmn :bpmn :audit-ledger]
+ :itonami.blueprint/status :public-oss}
