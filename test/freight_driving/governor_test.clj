@@ -25,6 +25,21 @@
     (is (= :hold (:decision result)))
     (is (some #(= :no-load (:rule %)) (:violations result)))))
 
+(deftest holds-on-orphaned-load-with-no-route-record
+  ;; a load's :route-id is caller-supplied at registration and was never
+  ;; validated against the route store (:route-fn wasn't even wired into
+  ;; env-for-store), so a load could reference a route that was never
+  ;; registered, with the route half of "load on a registered route"
+  ;; completely unchecked.
+  (let [st (store/mem-store)
+        _ (store/register-load! st {:load-id "orphan-load" :route-id "no-such-route" :weight-kg 8000})
+        env (governor/env-for-store st)
+        proposal {:kind :delivery :load-id "orphan-load" :safety-class :low
+                   :effect :propose :confidence 0.9}
+        result (governor/assess env proposal)]
+    (is (= :hold (:decision result)))
+    (is (some #(= :no-route (:rule %)) (:violations result)))))
+
 (deftest holds-on-no-actuation-violation
   (let [st (fresh-store)
         env (governor/env-for-store st)

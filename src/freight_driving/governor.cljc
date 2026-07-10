@@ -16,7 +16,15 @@
 
   HARD invariants for :freight/propose:
     1. Load provenance      — a delivery or duty-hours entry must reference
-       a registered load on a registered route.
+       a registered load on a registered route. Checks BOTH halves
+       independently (:no-load / :no-route) — a load's :route-id is
+       caller-supplied at registration and was never validated against
+       the route store (:route-fn wasn't even wired into env-for-store),
+       so a load could reference a route that was never registered, with
+       the route half of this invariant completely unchecked. Same class
+       of gap already found and fixed in the sibling ISCO-1212/2221/6112/
+       7126 governors (:no-employee-record / :no-patient-record /
+       :no-plot / :no-site).
     2. No-actuation         — the proposal must not directly mutate a
        delivery or duty-hours record outside the record-delivery!/
        record-duty-hours! path (effect must be :propose, never a raw store
@@ -55,13 +63,17 @@
        (> (+ (reduce + 0 (map :hours existing-entries)) (:hours proposal))
           max-daily-hours)))
 
-(defn- hard-violations [{:keys [load-fn duty-hours-fn]} proposal]
+(defn- hard-violations [{:keys [load-fn duty-hours-fn route-fn]} proposal]
   (let [{:keys [load-id safety-class effect]} proposal
         found-load (load-fn load-id)
-        existing (when found-load (duty-hours-fn load-id))]
+        existing (when found-load (duty-hours-fn load-id))
+        route (when found-load (route-fn (:route-id found-load)))]
     (cond-> []
       (nil? found-load)
       (conj {:rule :no-load :detail (str "未登録 load " load-id)})
+
+      (and found-load (nil? route))
+      (conj {:rule :no-route :detail (str "未登録 route " (:route-id found-load))})
 
       (not= :propose effect)
       (conj {:rule :no-actuation :detail "effect は :propose のみ許可（直接書込禁止）"})
@@ -78,8 +90,9 @@
                            ") を超過 — :high 以上の safety-class が必須")}))))
 
 (defn assess
-  "Assess a proposal against `env` (a map with `:load-fn`/`:duty-hours-fn`
-  lookups, decoupled from any concrete Store so this stays pure). Returns
+  "Assess a proposal against `env` (a map with `:load-fn`/`:duty-hours-fn`/
+  `:route-fn` lookups, decoupled from any concrete Store so this stays
+  pure). Returns
   `{:decision :proceed|:hold|:human-approval :violations [...] :confidence n}`."
   [env proposal]
   (let [violations (hard-violations env proposal)
@@ -104,4 +117,5 @@
   `freight-driving.store/Store` implementation."
   [store]
   {:load-fn #(store/load-info store %)
-   :duty-hours-fn #(store/duty-hours-of store %)})
+   :duty-hours-fn #(store/duty-hours-of store %)
+   :route-fn #(store/route store %)})
