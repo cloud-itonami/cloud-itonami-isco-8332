@@ -1,15 +1,1 @@
-{:itonami.blueprint/id "cloud-itonami-isco-8332"
- :itonami.blueprint/name "Independent Freight Driving Operations"
- :itonami.blueprint/isco-08 "8332"
- :itonami.blueprint/domain :logistics/freight-driving
- :itonami.blueprint/license "AGPL-3.0-or-later"
- :itonami.blueprint/social-impact [:supply-reliability :road-safety :driver-wellbeing]
- :itonami.blueprint/governor :freight-driver-governor
- :itonami.blueprint/robotics true
- :itonami.blueprint/required-technologies [:robotics :telemetry :identity :dmn :bpmn :audit-ledger]
- :itonami.blueprint/status :public-oss
- :itonami.blueprint/game {:id "freight-run"
-                          :repo "gftdcojp/network-isekai"
-                          :path "public/games/itonami/freight-run"
-                          :url "https://isekai.network/itonami/freight-run"
-                          :adr "ADR-2607031000"}}
+[{:itonami.blueprint/social-impact [:supply-reliability :road-safety :driver-wellbeing], :itonami.blueprint/domain :logistics/freight-driving, :itonami.blueprint/required-technologies [:robotics :telemetry :identity :dmn :bpmn :audit-ledger], :itonami.blueprint/isco-08 "8332", :itonami.blueprint/name "Independent Freight Driving Operations", :itonami.blueprint/governor :freight-driver-governor, :itonami.blueprint/robotics true, :db/id -1, :itonami.blueprint/status :public-oss, :itonami.blueprint/id "cloud-itonami-isco-8332", :itonami.blueprint/license "AGPL-3.0-or-later", :itonami.blueprint/game "{:id \"freight-run\", :repo \"gftdcojp/network-isekai\", :path \"public/games/itonami/freight-run\", :url \"https://isekai.network/itonami/freight-run\", :adr \"ADR-2607031000\"}"}]
