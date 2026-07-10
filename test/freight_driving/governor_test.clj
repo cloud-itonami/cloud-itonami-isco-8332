@@ -67,6 +67,22 @@
       (is (= :hold (:decision result)))
       (is (some #(= :hours-of-service (:rule %)) (:violations result))))))
 
+(deftest holds-on-unrecognized-safety-class-instead-of-silently-proceeding
+  ;; safety-rank used .indexOf, which returns -1 (not an exception) for a
+  ;; value outside safety-classes, silently ranked as 0 == :none -- an
+  ;; unrecognized safety-class (typo, wrong type, or unexpected Advisor
+  ;; output) used to bypass the mandatory human-approval gate for
+  ;; :high/:safety-critical proposals instead of failing closed. Uses
+  ;; :kind :delivery so only :invalid-safety-class is exercised, not
+  ;; :hours-of-service.
+  (let [st (fresh-store)
+        env (governor/env-for-store st)
+        proposal {:kind :delivery :load-id "load-1" :safety-class :extreme
+                   :effect :propose :confidence 1.0}
+        result (governor/assess env proposal)]
+    (is (= :hold (:decision result)))
+    (is (some #(= :invalid-safety-class (:rule %)) (:violations result)))))
+
 (deftest human-approval-on-low-confidence
   (let [st (fresh-store)
         env (governor/env-for-store st)
