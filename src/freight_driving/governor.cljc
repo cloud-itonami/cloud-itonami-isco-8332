@@ -32,7 +32,19 @@
 (def confidence-floor 0.6)
 (def max-daily-hours 11)
 (def safety-classes [:none :low :medium :high :safety-critical])
+(def ^:private known-safety-classes (set safety-classes))
 
+;; .indexOf returns -1 (not an exception) for a safety-class outside
+;; safety-classes, and this silently mapped to rank 0 == :none -- an
+;; unrecognized safety-class (a typo, wrong type, or an unexpected value
+;; from a buggy/malicious Advisor) used to silently rank as the LEAST
+;; severe class, defeating `(>= (safety-rank safety-class) (safety-rank
+;; :high))` in `assess` below and letting it bypass the mandatory
+;; human-approval gate instead of failing closed. Callers must reject an
+;; unrecognized safety-class as a hard violation (see hard-violations)
+;; before it ever reaches this rank comparison. (The hours-of-service
+;; check below also calls safety-rank, but in the OPPOSITE `<` direction,
+;; where a silent rank-0 default already fails safe -- left unchanged.)
 (defn- safety-rank [safety-class]
   (let [idx (.indexOf safety-classes safety-class)]
     (if (neg? idx) 0 idx)))
@@ -53,6 +65,10 @@
 
       (not= :propose effect)
       (conj {:rule :no-actuation :detail "effect は :propose のみ許可（直接書込禁止）"})
+
+      (and (some? safety-class) (not (contains? known-safety-classes safety-class)))
+      (conj {:rule :invalid-safety-class
+             :detail (str "未知の safety-class " safety-class)})
 
       (and found-load
            (exceeds-hos? existing proposal)
