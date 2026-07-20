@@ -34,9 +34,29 @@
        requires :high or higher safety-class, forcing human sign-off; it is
        never auto-approved regardless of confidence.
   SOFT:
-    4. Confidence floor → escalate."
-  (:require [freight-driving.store :as store]))
+    4. Confidence floor → escalate.
 
+  Dispositions (ADR-2607202600 adds :human-required to the pre-existing
+  :proceed/:hold/:human-approval vocabulary): `:human-approval` means the
+  robot COULD perform the action but a human must sign off first (e.g. the
+  hours-of-service gate above). `:human-required` means the robot is
+  structurally UNABLE to perform the task at all — some route/terrain/
+  manual step (e.g. a manual-loading dock step) sits outside the
+  autonomous-driving stack's certified operating domain, so a human must
+  actually DO the work, not just approve a robot action. This is always an
+  explicit ground-truth field on the proposal (`:human-required?` +
+  `:gap`) — never inferred/guessed by the governor (this fleet's
+  discipline: HARD/dispositional checks key off explicit fields on the
+  record, never LLM inference). A real HARD violation (load provenance,
+  no-actuation, invalid safety-class, hours-of-service) still forces
+  :hold regardless of `:human-required?` — see `assess` below."
+  (:require [freight-driving.store :as store]
+            [kotoba.occupation :as occupation]))
+
+(def isco-08
+  "This actor's ISCO-08 unit group id (blueprint.edn `:itonami.blueprint/isco-08`),
+  used to shape human-gap referral drafts via `kotoba.occupation/human-gap-referral-draft`."
+  "8332")
 (def confidence-floor 0.6)
 (def max-daily-hours 11)
 (def safety-classes [:none :low :medium :high :safety-critical])
@@ -93,7 +113,17 @@
   "Assess a proposal against `env` (a map with `:load-fn`/`:duty-hours-fn`/
   `:route-fn` lookups, decoupled from any concrete Store so this stays
   pure). Returns
-  `{:decision :proceed|:hold|:human-approval :violations [...] :confidence n}`."
+  `{:decision :proceed|:hold|:human-approval|:human-required :violations [...] :confidence n}`.
+
+  `:human-required?` (true/false) is an explicit ground-truth field the
+  proposing Advisor sets on the proposal — never inferred here — paired
+  with a `:gap` map (`{:task :reason :duration :location :urgency}`,
+  ADR-2607202600 / `kotoba.occupation/human-gap-referral-draft` shape).
+  When set, and no real HARD violation fired first, `assess` returns
+  `:human-required` with a `:referral` draft naming which existing
+  cloud-itonami staffing/matching actor a human operator should carry the
+  gap to — this governor never calls that actor directly (ADR-2607131000
+  handoff invariant, generalized by ADR-2607202600)."
   [env proposal]
   (let [violations (hard-violations env proposal)
         safety-class (or (:safety-class proposal) :none)
@@ -101,6 +131,10 @@
     (cond
       (seq violations)
       {:decision :hold :violations violations :confidence confidence}
+
+      (true? (:human-required? proposal))
+      {:decision :human-required :violations [] :confidence confidence
+       :referral (occupation/human-gap-referral-draft isco-08 (:gap proposal))}
 
       (>= (safety-rank safety-class) (safety-rank :high))
       {:decision :human-approval :violations [] :confidence confidence}

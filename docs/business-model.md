@@ -70,6 +70,55 @@ current manifest — an *unmanifested load* — regardless of the load's value o
 urgency, any driving-assist override without a gate check, and any
 safety-critical route deviation lacking human sign-off.
 
+## Human-Required Gap Referral (ADR-2607202600)
+
+Some tasks sit outside anything `:freight-driver-governor` can ever approve
+the robot for — not because a sign-off is missing, but because the
+autonomous-driving stack is structurally not certified for that task at all
+(e.g. a recurring manual-loading dock step at the yard, or a route/terrain
+that isn't on any automation roadmap). When the proposing Advisor sets an
+explicit `:human-required? true` ground-truth flag (with a `:gap` describing
+the task), the governor returns a distinct `:human-required` decision — never
+folded into the existing `:human-approval` sign-off gate, and never inferred
+by the governor itself.
+
+`:human-required` carries a **referral draft**, produced by the shared
+`kotoba.occupation/human-gap-referral-draft` function (`kotoba-lang/
+occupation`), naming which existing cloud-itonami staffing/matching actor a
+human operator should carry the gap to, depending on the gap's shape
+(`kotoba.occupation/route-gap`'s precedence, highest first):
+
+- no automation path at all, or the task is remote → `cloud-itonami-isic-8299`
+  (independent contracted operator, task-based) — this wins outright over
+  :duration, including :permanent or :recurring
+- a durable/permanent headcount gap → `cloud-itonami-isic-7810` (one-time
+  placement-fee agency)
+- recurring + on-site → `cloud-itonami-isic-7820` (employer-of-record
+  dispatch)
+- anything else/ambiguous → `cloud-itonami-isic-8299` (the conservative,
+  no-employer-of-record default)
+
+`cloud-itonami-isic-6399` (public job board) is **not** a branch of this
+routing table — it is a separate, explicitly-invoked "widen candidate reach"
+pre-step (`kotoba.occupation/widen-reach-draft`) that may precede any of the
+above, per ADR-2607202600.
+
+This actor **never calls any of those actors directly** — no shared store, no
+cross-actor invocation. The referral draft is human-carried, exactly the
+handoff invariant ADR-2607131000 already established for isic-6399↔7810. This
+actor's own ledger (`freight-driving.store/record-human-gap!`) records only
+its own half: the gap detected, the draft-id, and the target actor named.
+
+**Honesty boundary**: this repository implements governed, audited
+DECISION-MAKING software only — gap detection, referral-draft shaping, and
+ledger recording. It does **not** itself contact any real recruiting
+platform, execute any real contract, or move any real payment. A human
+operator (or a real licensed staffing business) must carry the draft and
+supply the real-world recruiting, e-signature, and payment integration. A
+task under `:human-required` stays `:pending-referral` in this actor's own
+execution/business state until a human actually carries the draft in and the
+target actor's own governor takes over — it is never fabricated as complete.
+
 ## Required Technologies
 
 `blueprint.edn` names six required technologies; each exists to serve a
