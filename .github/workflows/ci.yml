@@ -1,5 +1,11 @@
 name: CI
 
+# Workspace layout: deps.edn uses :local/root to kotoba-lang/occupation
+# (ADR-2607202600), which itself uses :local/root to kotoba-lang/technology.
+# CI reconstructs the sibling orgs/<org>/<repo> paths tools.deps needs to
+# resolve both, per this fleet's established multi-checkout pattern (see
+# e.g. cloud-itonami-isic-2511's ci.yml).
+
 on:
   push:
     branches: [main]
@@ -10,8 +16,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { path: orgs/cloud-itonami/cloud-itonami-isco-8332 }
+      - uses: actions/checkout@v4
+        with:
+          repository: kotoba-lang/occupation
+          path: orgs/kotoba-lang/occupation
+      - uses: actions/checkout@v4
+        with:
+          repository: kotoba-lang/technology
+          path: orgs/kotoba-lang/technology
       - uses: DeLaGuardo/setup-clojure@13.4
         with:
           cli: latest
-      - run: clojure -M:test
-      - run: clojure -M:lint
+      - name: test
+        working-directory: orgs/cloud-itonami/cloud-itonami-isco-8332
+        run: clojure -M:test
+      - name: lint
+        working-directory: orgs/cloud-itonami/cloud-itonami-isco-8332
+        run: clojure -M:lint
