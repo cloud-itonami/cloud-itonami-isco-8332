@@ -64,7 +64,7 @@ implementation of the Core Contract above (pure cljc, no external deps):
   escalated; low-confidence proposals also escalate.
 
 ```bash
-clojure -M:test   # 9 tests, 16 assertions, green
+kbb -M:test   # 9 tests, 16 assertions, green
 ```
 
 This is what backs this repo's `:maturity :implemented` entry in
