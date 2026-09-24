@@ -1,5 +1,5 @@
 (ns freight-driving.telemetry-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [freight-driving.store :as store]
             [freight-driving.telemetry :as telemetry]))
 
