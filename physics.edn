@@ -1,0 +1,35 @@
+;; What this vertical's robot physically does, declared for
+;; kotoba.robotics.process (kotoba-lang/robotics). `kbb -M:physics` runs it.
+;;
+;; README "Robotics premise": an ADAS/co-pilot assist system performs
+;; lane-keeping, collision-avoidance and loading-dock coupling assist;
+;; highway driving, backing near docks and hours-of-service edge cases need
+;; human sign-off. The physical work it assists: a loaded articulated truck
+;; climbing a long motorway grade (how far speed falls with load), and the
+;; slow reverse onto a loading dock.
+;;
+;; Every number without a cited source is marked `estimate` in its :basis.
+;; Replacing an estimate with a sourced value is this bot's growth work.
+{:physics/schema "itonami.physical-ai.spec.v1"
+ :repo "cloud-itonami/cloud-itonami-isco-8332"
+ :cases
+ [{:id :loaded-truck-on-grade
+   :kind :transport
+   :procedure "articulated truck (15 t tractor and empty trailer) pulls away and climbs 1 km of a 3 degree motorway grade at up to 80 km/h"
+   :params {:mass-kg 15000.0 :distance-m 1000.0 :v-max-mps 22.2 :a-max-mps2 0.8
+            :brake-decel-mps2 2.0 :drive-force-n 40000.0 :crr 0.006 :slope-deg 3.0
+            :cog-height-m 1.5 :support-half-length-m 3.5 :max-time-s 1800.0}
+   :sweep {:param :payload-kg :values [5000.0 10000.0 15000.0 20000.0 25000.0]}
+   :quantity :cycle-time-s
+   :limit {:max 90.0 :basis "estimate: about 90 s for the 1 km climb before the truck becomes an obstruction needing the crawler lane"}
+   :boundary {:lo 1000.0 :hi 40000.0}}
+  {:id :dock-reverse
+   :kind :transport
+   :procedure "loaded truck reverses 30 m onto a loading dock under coupling assist at a capped creep speed"
+   :params {:mass-kg 15000.0 :payload-kg 20000.0 :distance-m 30.0 :a-max-mps2 0.3
+            :brake-decel-mps2 0.5 :drive-force-n 40000.0 :crr 0.006
+            :cog-height-m 1.8 :support-half-length-m 3.5 :max-time-s 600.0}
+   :sweep {:param :v-max-mps :values [0.5 1.0 1.5 2.0 2.5]}
+   :quantity :cycle-time-s
+   :limit {:max 45.0 :basis "estimate: dock turnaround allows about 45 s for the final reverse"}
+   :boundary {:lo 0.3 :hi 3.0}}]}
